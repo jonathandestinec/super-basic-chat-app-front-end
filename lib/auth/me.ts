@@ -1,20 +1,22 @@
-export default async function ME() {
+"use server"
+import { cookies } from "next/headers"
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+export default async function me() {
+    const cookieStore = await cookies()
+    const me = cookieStore.get("me")?.value
 
-    const res = await fetch(`${apiUrl}/api/me`, {
-        credentials: "include",
-        headers: {
-            "Content-Type": "application/json",
-        }
-    });
-
-    if (!res.ok) {
-        return null;
+    if (!me) {
+        return null
     }
 
-    const data = await res.json();
+    const loginInfo: Me = JSON.parse(me)
 
-    return data;
+    // verifyToken
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL!}/api/verify-token/${loginInfo.token}`)
 
+    if (!res.ok) {
+        return null
+    }
+
+    return loginInfo
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { storeUser } from "@/lib/auth/storeUser";
 
 export default function Login() {
   const router = useRouter();
@@ -26,6 +27,14 @@ export default function Login() {
         name,
         password,
       }),
+    });
+
+    // Store user to cookies
+    const login = await res.json();
+    storeUser({
+      id: login.user.id,
+      name: login.user.name,
+      token: login.token,
     });
 
     if (!res.ok) {
