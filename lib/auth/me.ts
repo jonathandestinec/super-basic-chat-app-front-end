@@ -2,7 +2,9 @@
 import { cookies } from "next/headers"
 
 export default async function me() {
-    const cookieStore = await cookies()
+    const cookieStore = await cookies();
+    cookieStore.getAll();
+
     const me = cookieStore.get("me")?.value
 
     if (!me) {

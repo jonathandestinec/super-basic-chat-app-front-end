@@ -1,8 +1,24 @@
-export default async function getChatRooms(loginInfo: Me) {
+import ME from "@/lib/auth/me";
+
+export default async function getChatRooms() {
+
+    const me = await ME();
+
+    if (!me) {
+        return {
+            rooms: [],
+            message: "Not logged in",
+            error: true
+        };
+    }
+
+    console.log({ me })
+
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL!}/api/chat-rooms`, {
         headers: {
-            Authorization: `Bearer ${loginInfo.token}`
-        }
+            Authorization: `Bearer ${me.token}`,
+        },
+        credentials: "include"
     })
 
     if (!res.ok) {

@@ -32,5 +32,5 @@ export default async function getChat(roomId: string) {
         _id: data._id,
         members: data.members,
         messages: data.messages,
-    };
+    } as Chat;
 }
