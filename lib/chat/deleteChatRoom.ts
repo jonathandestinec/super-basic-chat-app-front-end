@@ -1,6 +1,8 @@
 export default async function deleteChatRoom(chatId: string, loginInfo: Me) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
 
+    console.log("Deleting...", chatId)
+
     const response = await fetch(`${apiUrl}/api/chat/${chatId}`, {
         method: "DELETE",
         headers: {

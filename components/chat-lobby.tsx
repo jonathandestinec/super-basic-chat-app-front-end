@@ -167,11 +167,14 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
   const handleDeleteRoom = async (e: React.MouseEvent, roomId: string) => {
     e.stopPropagation();
 
+    console.log({ roomId });
+
     try {
       const deletedChat = await deleteChatRoom(roomId, loginInfo);
 
       if (!deletedChat) {
-        toast.error("Failed to delete chat room");
+        toast.error(`Failed to delete chat room ${roomId}`);
+        console.log(roomId);
         return;
       }
 
@@ -194,8 +197,6 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
         toast.error("Failed to delete message");
         return;
       }
-
-      toast.success("Message deleted successfully");
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete message");
@@ -311,7 +312,7 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
                             <div className="flex -space-x-2">
                               {room.members.slice(0, 2).map((member, i) => (
                                 <div
-                                  key={i}
+                                  key={`room._id-${i}`}
                                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
                                     i === 0 ? "bg-purple-400" : "bg-emerald-400"
                                   }`}
