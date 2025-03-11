@@ -1,13 +1,6 @@
-"use server"
-
-import { cookies } from "next/headers"
+"use client"
 
 export const storeUser = async (user: Me) => {
-    const cookieStore = await cookies()
-    cookieStore.set({
-        name: "me",
-        value: JSON.stringify(user),
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7
-    })
+    // Store user in LocalStorage
+    localStorage.setItem("me", JSON.stringify(user))
 }

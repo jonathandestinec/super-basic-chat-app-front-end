@@ -1,11 +1,9 @@
-"use server"
-import { cookies } from "next/headers"
+"use client"
 
 export default async function me() {
-    const cookieStore = await cookies();
-    cookieStore.getAll();
 
-    const me = cookieStore.get("me")?.value
+    // Get me from localStorage
+    const me = localStorage.getItem("me")
 
     if (!me) {
         return null
