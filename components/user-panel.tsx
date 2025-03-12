@@ -13,8 +13,8 @@ const UserPanel = ({ loginInfo }: { loginInfo: Me }) => {
   const router = useRouter();
 
   const handleLogout = () => {
-    // Clear cookies or local storage
-    document.cookie = "me=;";
+    // Clear me from local storage
+    localStorage.removeItem("me");
 
     // Refresh
     router.push("/");

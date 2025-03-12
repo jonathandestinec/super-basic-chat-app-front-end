@@ -45,9 +45,13 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
   };
 
   useEffect(() => {
-    // client-side
     socket.on("connect", () => {
-      console.log(socket.id); // x8WIv7-mJelg7on_ALbx
+      console.log({ socketId: socket.id });
+
+      // Send broadcast to join room
+      socket.emit("join_lobby", loginInfo.id);
+
+      console.log({ socketId: socket.id });
     });
 
     socket.on("disconnect", () => {
@@ -66,6 +70,7 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
     socket.off("created_chat");
     socket.on("created_chat", (newChat) => {
       console.log({ newChatCreated: newChat });
+
       setChatRooms((prev) => [...prev, newChat]); // Add new chat in real-time
     });
 
