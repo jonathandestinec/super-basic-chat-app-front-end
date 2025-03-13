@@ -7,27 +7,27 @@ import {
   Send,
   MessageSquare,
   X,
-  User,
-  Users,
-  Trash2,
-  UserPlus,
-  Instagram,
+  ChevronLeft,
+  Plus,
+  MessageCircle,
 } from "lucide-react";
 import getChatRooms from "@/lib/chat/getChatRooms";
 import getChat from "@/lib/chat/getChat";
 import { toast } from "sonner";
-import UserPanel from "@/components/user-panel";
 import CreateChatButton from "@/components/create-chat-button";
-import MagicParticles from "./magic-particles";
 import { sendMessage } from "@/lib/chat/sendMessage";
 import { socket } from "@/socket";
 import AddMemberModal from "@/components/add-member-modal";
 import addMember from "@/lib/chat/addMember";
 import deleteChatRoom from "@/lib/chat/deleteChatRoom";
 import deleteMessage from "@/lib/chat/deleteMessage";
+import UserDrawer from "@/components/user-drawer";
+import ChatMenu from "@/components/chat-menu";
+import Loading from "@/components/loading";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
-  // Get Chat Rooms
+  // State
   const [chatRooms, setChatRooms] = useState<Room[]>([]);
   const [chatOpened, setChatOpened] = useState(false);
   const [chatMembers, setChatMembers] = useState<User[]>([]);
@@ -35,69 +35,97 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
   const [messageInput, setMessageInput] = useState("");
   const [openRoomId, setOpenRoomId] = useState("");
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isUserDrawerOpen, setIsUserDrawerOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatListRef = useRef<HTMLDivElement>(null);
 
+  // Media query
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   const fetchChatRooms = async () => {
-    const fetchedChatRooms = await getChatRooms();
-    setChatRooms(fetchedChatRooms.rooms);
-    console.log(fetchedChatRooms);
+    setIsLoading(true);
+    try {
+      const fetchedChatRooms = await getChatRooms();
+      // Sort rooms by most recent first
+      setChatRooms(fetchedChatRooms.rooms);
+    } catch (error) {
+      console.error("Failed to fetch chat rooms:", error);
+      toast.error("Failed to load chat rooms");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    socket.on("connect", () => {
-      console.log({ socketId: socket.id });
+    if (!socket) return;
 
-      // Send broadcast to join room
+    const handleConnect = () => {
+      console.log({ socketId: socket.id, loginInfo: loginInfo.id });
+
       socket.emit("join_lobby", loginInfo.id);
+    };
 
-      console.log({ socketId: socket.id });
-    });
-
-    socket.on("disconnect", () => {
-      console.log(socket.id); // undefined
-    });
+    handleConnect();
   }, []);
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.off("new_message");
-    socket.on("new_message", (newChat) => {
-      setChatMessages((prev) => [...prev, newChat]); // Add new message in real-time
-    });
+    const handleNewMessage = (newChat: Message) => {
+      console.log("New message received", newChat);
 
-    socket.off("created_chat");
-    socket.on("created_chat", (newChat) => {
-      console.log({ newChatCreated: newChat });
+      setChatMessages((prev) => [...prev, newChat]);
 
-      setChatRooms((prev) => [...prev, newChat]); // Add new chat in real-time
-    });
+      // Update the chat room's last message
+      setChatRooms((prev) => {
+        const updatedRooms = prev.map((room) => {
+          if (room._id === newChat.chatId) {
+            return {
+              ...room,
+              lastMessage: newChat,
+              updatedAt: new Date().toISOString(),
+              messages: [...room.messages, newChat],
+            };
+          }
+          return room;
+        });
 
-    socket.off("deleted_message");
-    socket.on("deleted_message", (message) => {
-      setChatMessages((prev) =>
-        prev.filter((msg) => {
-          if (msg._id !== message._id) return message;
-        })
-      );
-    });
+        // Sort by most recent message
+        return [...updatedRooms];
+      });
+    };
 
-    socket.off("deleted_chat");
-    socket.on("deleted_chat", (chat) => {
-      setChatRooms((prev) =>
-        prev.filter((room) => {
-          if (room._id !== chat._id) return chat;
-        })
-      );
+    const handleCreatedChat = (newChat: Room) => {
+      setChatRooms((prev) => [newChat, ...prev]);
+    };
 
+    const handleDeletedMessage = (message: Message) => {
+      setChatMessages((prev) => prev.filter((msg) => msg._id !== message._id));
+      setChatRooms((prev) => {
+        return prev.map((room) => {
+          if (room._id === message.chatId) {
+            return {
+              ...room,
+              messages: room.messages.filter((msg) => msg._id !== message._id),
+            };
+          }
+          return room;
+        });
+      });
+    };
+
+    const handleDeletedChat = (chat: Room) => {
+      setChatRooms((prev) => prev.filter((room) => room._id !== chat._id));
       if (openRoomId === chat._id) {
         setChatOpened(false);
       }
-    });
+    };
 
-    socket.off("added_member");
-    socket.on("added_member", (data) => {
+    const handleAddedMember = (data: { chatId: string; newMember: User }) => {
       const { chatId, newMember } = data;
       setChatRooms((prev) =>
         prev.map((room) =>
@@ -110,23 +138,25 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
       if (openRoomId === chatId) {
         setChatMembers((prev) => [...prev, newMember]);
       }
-    });
+    };
+
+    socket.on("new_message", handleNewMessage);
+    socket.on("created_chat", handleCreatedChat);
+    socket.on("deleted_message", handleDeletedMessage);
+    socket.on("deleted_chat", handleDeletedChat);
+    socket.on("added_member", handleAddedMember);
 
     return () => {
-      socket.off("created_chat");
-      socket.off("new_message");
-      socket.off("deleted_message");
-      socket.off("deleted_chat");
-      socket.off("added_member");
+      socket.off("new_message", handleNewMessage);
+      socket.off("created_chat", handleCreatedChat);
+      socket.off("deleted_message", handleDeletedMessage);
+      socket.off("deleted_chat", handleDeletedChat);
+      socket.off("added_member", handleAddedMember);
     };
   }, [openRoomId]);
 
   useEffect(() => {
-    toast.promise(fetchChatRooms(), {
-      loading: "Loading chat rooms...",
-      success: "Chat rooms loaded successfully",
-      error: "Failed to load chat rooms",
-    });
+    fetchChatRooms();
   }, []);
 
   useEffect(() => {
@@ -135,31 +165,32 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
   }, [chatMessages]);
 
   const handleToggleChat = async (roomId: string) => {
-    console.log(roomId);
-
-    const fetchedChat = await getChat(roomId);
-
-    setChatMembers(fetchedChat.members);
-    setChatMessages(fetchedChat.messages);
-    setChatOpened(true);
-    setOpenRoomId(roomId);
+    try {
+      const fetchedChat = await getChat(roomId);
+      setChatMembers(fetchedChat.members);
+      setChatMessages(fetchedChat.messages);
+      setChatOpened(true);
+      setOpenRoomId(roomId);
+    } catch (error) {
+      console.error("Failed to fetch chat:", error);
+      toast.error("Failed to open chat");
+    }
   };
 
   const handleSendMessage = async () => {
-    console.log("Sending Message");
-    if (messageInput === "") return;
+    if (messageInput.trim() === "" || isSending) return;
 
-    // Send message
-    const newMessage = await sendMessage(loginInfo, openRoomId, messageInput);
-
-    if (!newMessage) return;
-
-    setMessageInput("");
-
-    console.log({ messageInput, openRoomId });
-
-    // Scroll to bottom
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setIsSending(true);
+    try {
+      await sendMessage(loginInfo, openRoomId, messageInput);
+      setMessageInput("");
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -169,41 +200,22 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
     }
   };
 
-  const handleDeleteRoom = async (e: React.MouseEvent, roomId: string) => {
-    e.stopPropagation();
-
-    console.log({ roomId });
-
+  const handleDeleteRoom = async () => {
     try {
-      const deletedChat = await deleteChatRoom(roomId, loginInfo);
-
-      if (!deletedChat) {
-        toast.error(`Failed to delete chat room ${roomId}`);
-        console.log(roomId);
-        return;
-      }
-
-      toast.success("Chat room deleted successfully");
+      await deleteChatRoom(openRoomId, loginInfo);
+      toast.success("Chat deleted successfully");
+      setChatOpened(false);
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to delete chat room");
+      console.error("Failed to delete chat:", error);
+      toast.error("Failed to delete chat");
     }
   };
 
   const handleDeleteMessage = async (messageId: string) => {
     try {
-      const deletedMessage = await deleteMessage(
-        messageId,
-        loginInfo,
-        openRoomId
-      );
-
-      if (!deletedMessage) {
-        toast.error("Failed to delete message");
-        return;
-      }
+      await deleteMessage(messageId, loginInfo, openRoomId);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to delete message:", error);
       toast.error("Failed to delete message");
     }
   };
@@ -212,365 +224,464 @@ const ChatLobby = ({ loginInfo }: { loginInfo: Me }) => {
     if (!openRoomId) return;
 
     try {
-      const newMember = await addMember(openRoomId, userId, loginInfo);
-
-      if (!newMember) {
-        toast.error("Failed to add member");
-        return;
-      }
-
+      await addMember(openRoomId, userId, loginInfo);
       setIsAddMemberOpen(false);
       toast.success("Member added successfully");
     } catch (error) {
-      console.error(error);
+      console.error("Failed to add member:", error);
       toast.error("Failed to add member");
     }
   };
 
+  const getLastMessagePreview = (room: Room) => {
+    if (!room.messages.at(-1)) return "No messages yet";
+
+    const text = room.messages.at(-1)?.text;
+    if (text) {
+      return text.length > 30 ? `${text.substring(0, 30)}...` : text;
+    }
+  };
+
+  const getSenderName = (room: Room) => {
+    if (!room.messages.at(-1)) return "";
+
+    const sender = room.members.find(
+      (member) => member._id === room.messages.at(-1)?.senderId
+    );
+    return sender?.name || "Unknown";
+  };
+
   return (
-    <div className="min-h-screen text-white p-6 flex flex-col">
-      <MagicParticles />
-
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-8"
-      >
-        <h1 className="text-4xl font-bold magical-text mb-2">
-          super-basic-chat-app
-        </h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-lg text-purple-200 flex items-center justify-center gap-1"
-        >
-          Built by Lime Juice 🧃
-          <span>
-            <a
-              href="https://www.instagram.com/oxleaff/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Instagram className="w-6 h-6 ml-2" />
-            </a>
-          </span>
-        </motion.p>
-      </motion.div>
-
-      {/* User Panel */}
-      <UserPanel loginInfo={loginInfo} />
-
-      <div className="flex flex-col md:flex-row gap-6 flex-1">
-        {/* Chat Rooms List */}
-        <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-full md:w-1/3 glass-card p-4 overflow-hidden flex flex-col"
-          style={{ maxHeight: "70vh" }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="h-5 w-5 text-emerald-300" />
-            <h2 className="text-xl font-semibold text-emerald-300">
-              Chat Rooms
-            </h2>
-          </div>
-
-          <div
-            className="space-y-3 mt-4 overflow-y-auto pr-2 flex-grow"
-            ref={chatListRef}
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "rgba(255,255,255,0.2) transparent",
-            }}
-          >
-            <AnimatePresence>
-              {chatRooms.length > 0 ? (
-                chatRooms.map((room, index) => (
-                  <motion.div
-                    key={room._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    whileHover={{ scale: 1.03 }}
-                    className={`p-4 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden group ${
-                      openRoomId === room._id
-                        ? "bg-gradient-to-r from-purple-500/70 to-emerald-500/70 shadow-lg shadow-purple-500/20"
-                        : "bg-white/10 hover:bg-white/20"
-                    }`}
-                  >
-                    <div
-                      className="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-emerald-500/0 group-hover:from-purple-600/20 group-hover:to-emerald-500/20 transition-all duration-500"
-                      onClick={() => handleToggleChat(room._id)}
-                    ></div>
-
-                    <div className="flex justify-between items-start relative z-10">
-                      <div
-                        className="flex-1"
-                        onClick={() => handleToggleChat(room._id)}
-                      >
-                        {room.members.length > 0 ? (
-                          <div className="flex items-center gap-3">
-                            <div className="flex -space-x-2">
-                              {room.members.slice(0, 2).map((member, i) => (
-                                <div
-                                  key={`room._id-${i}`}
-                                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
-                                    i === 0 ? "bg-purple-400" : "bg-emerald-400"
-                                  }`}
-                                >
-                                  {member.name && member.name.charAt(0)}
-                                </div>
-                              ))}
-                            </div>
-                            <div className="font-medium">
-                              {room.members[0]?.name}{" "}
-                              {room.members.length > 1 &&
-                                `& ${room.members[1]?.name}`}
-                              {room.members.length > 2 &&
-                                ` +${room.members.length - 2}`}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <User className="h-5 w-5 text-gray-300" />
-                            <span className="text-gray-300">No members</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={(e) => handleDeleteRoom(e, room._id)}
-                        className="p-2 rounded-full hover:bg-white/20 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-300" />
-                      </motion.button>
-                    </div>
-
-                    <motion.div
-                      className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-purple-400 to-emerald-400"
-                      initial={{ width: "0%" }}
-                      whileHover={{ width: "100%" }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </motion.div>
-                ))
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="p-4 rounded-xl bg-white/10 text-center"
-                >
-                  <MessageSquare className="h-8 w-8 mx-auto mb-2 text-purple-300 opacity-70" />
-                  <p className="text-purple-200">No chat rooms available</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-
-        {/* Chat Window */}
-        <AnimatePresence mode="wait">
-          {chatOpened ? (
-            <motion.div
-              key="chat"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.4 }}
-              className="flex-1 glass-card flex flex-col overflow-hidden"
-              style={{ maxHeight: "70vh" }}
-            >
-              {/* Chat Header */}
-              <div className="p-4 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-purple-600/30 to-emerald-600/30">
-                <div className="flex items-center gap-3">
-                  <div className="flex -space-x-2">
-                    {chatMembers.slice(0, 2).map((member, i) => (
-                      <div
-                        key={i}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                          i === 0 ? "bg-purple-400" : "bg-emerald-400"
-                        }`}
-                      >
-                        {member.name.charAt(0)}
-                      </div>
-                    ))}
-                    {chatMembers.length > 2 && (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium bg-purple-300/50">
-                        +{chatMembers.length - 2}
-                      </div>
-                    )}
-                  </div>
-                  <h2 className="font-semibold">
-                    {chatMembers.length <= 2
-                      ? chatMembers.map((member) => member.name).join(" & ")
-                      : `${chatMembers[0].name}, ${chatMembers[1].name} & ${
-                          chatMembers.length - 2
-                        } more`}
-                  </h2>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setIsAddMemberOpen(true)}
-                    className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                    title="Add member"
-                  >
-                    <UserPlus className="h-5 w-5 text-emerald-300" />
-                  </motion.button>
-
-                  <button
-                    onClick={() => setChatOpened(false)}
-                    className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Messages */}
-              <div
-                className="flex-1 overflow-y-auto p-4 space-y-4"
-                style={{
-                  scrollbarWidth: "thin",
-                  scrollbarColor: "rgba(255,255,255,0.2) transparent",
-                }}
+    <div className="min-h-screen flex flex-col">
+      {/* Enhanced Header */}
+      <header className="bg-card border-b border-border p-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            {isMobile && chatOpened ? (
+              <button
+                onClick={() => setChatOpened(false)}
+                className="p-2 rounded-full hover:bg-secondary transition-colors"
               >
-                <AnimatePresence>
-                  {chatMessages.map((message, index) => {
-                    const isMe = message.senderId === loginInfo.id;
-                    const sender = chatMembers.find(
-                      (member) => member._id === message.senderId
-                    );
+                <ChevronLeft size={20} />
+              </button>
+            ) : (
+              <div className="relative">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", damping: 10, stiffness: 100 }}
+                  className="w-10 h-10 rounded-full discord-gradient flex items-center justify-center"
+                >
+                  <MessageCircle size={20} className="text-white" />
+                </motion.div>
+              </div>
+            )}
+            <div>
+              <motion.h1
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-xl font-bold"
+              >
+                <span className="text-foreground">Super</span>{" "}
+                <span className="text-foreground">Basic</span>{" "}
+                <span className="text-foreground">Chat</span>
+              </motion.h1>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"
+              />
+            </div>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsUserDrawerOpen(true)}
+            className="relative w-10 h-10 rounded-full discord-gradient flex items-center justify-center text-white font-bold shadow-md"
+          >
+            {loginInfo.name.charAt(0)}
+            <motion.div
+              animate={{
+                boxShadow: [
+                  "0 0 0 0 rgba(139, 92, 246, 0.7)",
+                  "0 0 0 10px rgba(139, 92, 246, 0)",
+                ],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "loop",
+              }}
+              className="absolute inset-0 rounded-full"
+            />
+          </motion.button>
+        </div>
+      </header>
 
-                    return (
+      {/* Main Content */}
+      <div
+        className={`flex flex-1 overflow-hidden ${
+          !isMobile ? "h-[calc(100vh-64px)]" : ""
+        }`}
+      >
+        {/* Chat List */}
+        {(!isMobile || !chatOpened) && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className={`w-full md:w-80 border-r border-border flex flex-col ${
+              !isMobile ? "h-[90vh]" : ""
+            }`}
+          >
+            <div className="p-4 border-b border-border flex justify-between items-center">
+              <h2 className="font-semibold text-lg">Conversations</h2>
+              <div className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
+                {chatRooms.length} {chatRooms.length === 1 ? "chat" : "chats"}
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <Loading type="component" />
+              </div>
+            ) : (
+              <div
+                className="flex-1 overflow-y-auto px-2 py-3"
+                ref={chatListRef}
+              >
+                {chatRooms.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    {chatRooms.map((room, index) => (
                       <motion.div
-                        key={message._id || index}
-                        initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className={`flex ${
-                          isMe ? "justify-end" : "justify-start"
-                        }`}
+                        key={room._id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          transition: { delay: index * 0.05 },
+                        }}
+                        onClick={() => handleToggleChat(room._id)}
+                        className={`relative overflow-hidden rounded-xl cursor-pointer transition-all duration-200 ${
+                          openRoomId === room._id
+                            ? "bg-secondary/80 border-primary"
+                            : "bg-secondary/30 hover:bg-secondary/50 border-transparent"
+                        } border-2 p-3`}
                       >
-                        <div
-                          className={`max-w-[80%] group ${
-                            isMe ? "order-2" : "order-1"
-                          }`}
-                        >
-                          <div className="relative">
-                            <div
-                              className={`px-4 py-2 rounded-2xl ${
-                                isMe
-                                  ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-br-none"
-                                  : "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-bl-none"
-                              }`}
-                            >
-                              <p>{message.text}</p>
-                            </div>
-
-                            {isMe && (
-                              <motion.button
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                whileHover={{ opacity: 1, scale: 1 }}
-                                className="absolute top-0 right-0 -mt-2 -mr-2 p-1 rounded-full bg-red-500/80 opacity-0 group-hover:opacity-70 transition-opacity"
-                                onClick={() => handleDeleteMessage(message._id)}
+                        {/* Members avatars */}
+                        <div className="flex items-center mb-3">
+                          <div className="flex -space-x-3 mr-3">
+                            {room.members.slice(0, 3).map((member, i) => (
+                              <div
+                                key={`${room._id}-${i}`}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium border-2 border-background ${
+                                  i === 0
+                                    ? "bg-indigo-500 z-30"
+                                    : i === 1
+                                    ? "bg-purple-500 z-20"
+                                    : "bg-pink-500 z-10"
+                                }`}
                               >
-                                <X className="h-3 w-3 text-white" />
-                              </motion.button>
+                                {member.name && member.name.charAt(0)}
+                              </div>
+                            ))}
+                            {room.members.length > 3 && (
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-medium bg-secondary border-2 border-background z-0">
+                                +{room.members.length - 3}
+                              </div>
                             )}
                           </div>
-                          <p
-                            className={`text-xs mt-1 text-purple-200 ${
-                              isMe ? "text-right" : "text-left"
-                            }`}
-                          >
-                            {sender?.name || "Unknown"}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">
+                              {room.members.map((m) => m.name).join(", ")}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {room.members.length}{" "}
+                              {room.members.length === 1 ? "member" : "members"}
+                            </div>
+                          </div>
                         </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-                <div ref={messagesEndRef} />
-              </div>
 
-              {/* Message Input */}
+                        {/* Last message preview */}
+                        {room.messages.at(-1) ? (
+                          <div className="bg-background/50 rounded-lg p-3 mt-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-indigo-500">
+                                {getSenderName(room).charAt(0)}
+                              </div>
+                              <span className="text-xs font-medium flex-1">
+                                {getSenderName(room) === loginInfo.name
+                                  ? "You"
+                                  : getSenderName(room)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {getLastMessagePreview(room)}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-background/50 rounded-lg p-3 mt-2 text-center text-muted-foreground text-sm">
+                            No messages yet
+                          </div>
+                        )}
+
+                        {/* Subtle gradient overlay */}
+                        <div
+                          className={`absolute inset-0 opacity-20 pointer-events-none ${
+                            openRoomId === room._id
+                              ? "bg-gradient-to-br from-indigo-500/20 to-purple-500/20"
+                              : ""
+                          }`}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                    <div className="relative w-20 h-20 mb-4">
+                      <motion.div
+                        className="absolute inset-0 bg-secondary/50 rounded-full"
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{
+                          repeat: Number.POSITIVE_INFINITY,
+                          duration: 2,
+                        }}
+                      />
+                      <MessageSquare className="absolute inset-0 m-auto h-10 w-10 text-muted-foreground opacity-50" />
+                    </div>
+                    <h3 className="font-medium mb-2">No conversations yet</h3>
+                    <p className="text-sm text-muted-foreground max-w-xs">
+                      Start a new chat by clicking the + button below to connect
+                      with others
+                    </p>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="mt-6 bg-primary/20 text-primary rounded-lg p-3 flex items-center gap-2"
+                    >
+                      <div className="w-8 h-8 rounded-full discord-gradient flex items-center justify-center">
+                        <Plus size={16} className="text-white" />
+                      </div>
+                      <span>Create your first chat</span>
+                    </motion.div>
+                  </div>
+                )}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Chat Window */}
+        {(!isMobile || chatOpened) && (
+          <AnimatePresence mode="wait">
+            {chatOpened ? (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                key="chat"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="p-4 border-t border-white/10 bg-black/30"
+                className={`flex-1 flex flex-col ${
+                  !isMobile ? "h-[90vh]" : "h-[90vh]"
+                }`}
               >
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                    placeholder="Type a magical message..."
-                    className="flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 text-white placeholder-purple-200"
-                  />
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleSendMessage}
-                    className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-emerald-500 text-white shadow-lg"
-                  >
-                    <Send className="h-5 w-5" />
-                  </motion.button>
+                {/* Chat Header - Now sticky */}
+                <div className="sticky top-0 z-10 p-4 border-b border-border flex justify-between items-center bg-card">
+                  <div className="flex items-center gap-3">
+                    <div className="flex -space-x-2">
+                      {chatMembers.slice(0, 2).map((member, i) => (
+                        <div
+                          key={i}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                            i === 0 ? "bg-indigo-500" : "bg-purple-500"
+                          }`}
+                        >
+                          {member.name.charAt(0)}
+                        </div>
+                      ))}
+                      {chatMembers.length > 2 && (
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium bg-secondary">
+                          +{chatMembers.length - 2}
+                        </div>
+                      )}
+                    </div>
+                    <h2 className="font-semibold">
+                      {chatMembers.length <= 2
+                        ? chatMembers.map((member) => member.name).join(", ")
+                        : `${chatMembers[0].name}, ${chatMembers[1].name} & ${
+                            chatMembers.length - 2
+                          } more`}
+                    </h2>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Close button added to header */}
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setChatOpened(false)}
+                      className="p-2 rounded-full hover:bg-secondary/70 transition-colors"
+                      aria-label="Close chat"
+                    >
+                      <X size={18} />
+                    </motion.button>
+                    <ChatMenu
+                      onAddMember={() => setIsAddMemberOpen(true)}
+                      onDeleteChat={handleDeleteRoom}
+                    />
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  <AnimatePresence initial={false}>
+                    {chatMessages.map((message, index) => {
+                      const isMe = message.senderId === loginInfo.id;
+                      const sender = chatMembers.find(
+                        (member) => member._id === message.senderId
+                      );
+
+                      // Group consecutive messages from the same sender
+                      const prevMessage =
+                        index > 0 ? chatMessages[index - 1] : null;
+                      const isConsecutive =
+                        prevMessage &&
+                        prevMessage.senderId === message.senderId;
+
+                      return (
+                        <motion.div
+                          key={message._id || index}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className={`flex ${
+                            isMe ? "justify-end" : "justify-start"
+                          }`}
+                        >
+                          <div
+                            className={`max-w-[80%] group ${
+                              isMe ? "items-end" : "items-start"
+                            } ${isConsecutive ? "mt-1" : "mt-3"}`}
+                          >
+                            {!isConsecutive && (
+                              <div
+                                className={`flex items-center gap-2 mb-1 ${
+                                  isMe ? "justify-end" : "justify-start"
+                                }`}
+                              >
+                                {!isMe && (
+                                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-indigo-500">
+                                    {sender?.name.charAt(0)}
+                                  </div>
+                                )}
+                                <span className="text-xs font-medium">
+                                  {isMe ? "You" : sender?.name || "Unknown"}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="relative">
+                              <div
+                                className={`px-4 py-2 rounded-lg ${
+                                  isMe
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-secondary text-secondary-foreground"
+                                }`}
+                              >
+                                <p>{message.text}</p>
+                              </div>
+
+                              {isMe && (
+                                <motion.button
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  whileHover={{ opacity: 1, scale: 1 }}
+                                  className="absolute top-0 right-0 -mt-2 -mr-2 p-1 rounded-full bg-destructive opacity-0 group-hover:opacity-70 transition-opacity"
+                                  onClick={() =>
+                                    handleDeleteMessage(message._id)
+                                  }
+                                >
+                                  <X className="h-3 w-3 text-white" />
+                                </motion.button>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Message Input */}
+                <div className="p-4 border-t border-border bg-card">
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      placeholder="Type a message..."
+                      disabled={isSending}
+                      className="flex-1 bg-secondary border-none rounded-full px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground"
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleSendMessage}
+                      disabled={isSending || messageInput.trim() === ""}
+                      className={`p-3 rounded-full discord-gradient text-white shadow-md ${
+                        isSending || messageInput.trim() === ""
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      <Send className="h-5 w-5" />
+                    </motion.button>
+                  </div>
                 </div>
               </motion.div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="placeholder"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex-1 glass-card flex flex-col justify-center items-center p-8"
-              style={{ maxHeight: "70vh" }}
-            >
+            ) : (
               <motion.div
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                transition={{
-                  repeat: Number.POSITIVE_INFINITY,
-                  repeatType: "reverse",
-                  duration: 2,
-                }}
+                key="placeholder"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex-1 flex flex-col justify-center items-center p-8"
               >
-                <MessageSquare className="h-16 w-16 text-purple-300 opacity-70 mb-4" />
+                <div className="max-w-md text-center">
+                  <MessageSquare className="h-16 w-16 mx-auto text-muted-foreground opacity-50 mb-6" />
+                  <h3 className="text-xl font-semibold mb-2 discord-text">
+                    Select a conversation
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Choose a chat from the list or create a new one to start
+                    messaging
+                  </p>
+                </div>
               </motion.div>
-              <h3 className="text-xl font-semibold text-center magical-text mb-2">
-                Select a chat to start messaging
-              </h3>
-              <p className="text-purple-200 text-center max-w-md">
-                Choose one of your magical chat rooms from the list to begin
-                your conversation
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        )}
       </div>
 
-      {/* Create Chat Button */}
-      <CreateChatButton loginInfo={loginInfo} chatOpen={chatOpened} />
+      {/* Create Chat Button - hide when chat is open */}
+      {!chatOpened && <CreateChatButton loginInfo={loginInfo} />}
 
       {/* Add Member Modal */}
       <AddMemberModal
         isOpen={isAddMemberOpen}
         onClose={() => setIsAddMemberOpen(false)}
         onAddMember={handleAddMember}
+      />
+
+      {/* User Drawer */}
+      <UserDrawer
+        isOpen={isUserDrawerOpen}
+        onClose={() => setIsUserDrawerOpen(false)}
+        loginInfo={loginInfo}
       />
     </div>
   );

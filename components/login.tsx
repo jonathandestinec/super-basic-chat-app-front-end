@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,8 @@ export default function Login() {
 
   const toggleMode = () => {
     setIsSignup(!isSignup);
+    setName("");
+    setPassword("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,59 +72,31 @@ export default function Login() {
 
   return (
     <div className="flex items-center justify-center min-h-screen">
-      {/* Background */}
-      <div className="fixed inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-purple-800 to-emerald-800" />
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.3, 0.4, 0.3],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-          className="absolute top-1/4 left-1/4 w-1/2 h-1/2 rounded-full bg-purple-600 blur-3xl opacity-30"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.2, 0.3, 0.2],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-            delay: 1,
-          }}
-          className="absolute bottom-1/4 right-1/4 w-1/2 h-1/2 rounded-full bg-emerald-600 blur-3xl opacity-20"
-        />
-      </div>
-
       {/* Content */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="glass-card w-full max-w-md mx-4 p-6 sm:p-8 z-10 my-4"
+        className="bg-card w-full max-w-md mx-4 p-6 sm:p-8 z-10 my-4 rounded-lg border border-border shadow-xl"
       >
         {/* Mode Toggle */}
-        <div className="flex justify-center mb-4 sm:mb-6 w-full overflow-hidden">
-          <div className="bg-white/10 p-1 rounded-full w-full max-w-[200px]">
+        <div className="flex justify-center mb-6 w-full overflow-hidden">
+          <div className="bg-secondary p-1 rounded-full w-full max-w-[200px]">
             <div className="relative flex">
               <motion.div
                 className="absolute inset-0 z-0"
                 animate={{ x: isSignup ? "50%" : "0%" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-                <div className="h-full w-1/2 magical-gradient rounded-full" />
+                <div className="h-full w-1/2 discord-gradient rounded-full" />
               </motion.div>
 
               <button
                 onClick={() => !isSignup || toggleMode()}
                 className={`relative z-10 flex-1 px-3 py-1.5 rounded-full transition-colors ${
-                  !isSignup ? "text-white" : "text-purple-200 hover:text-white"
+                  !isSignup
+                    ? "text-white"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -135,7 +108,9 @@ export default function Login() {
               <button
                 onClick={() => isSignup || toggleMode()}
                 className={`relative z-10 flex-1 px-3 py-1.5 rounded-full transition-colors ${
-                  isSignup ? "text-white" : "text-purple-200 hover:text-white"
+                  isSignup
+                    ? "text-white"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -152,7 +127,7 @@ export default function Login() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", damping: 10, stiffness: 100 }}
-            className="w-14 h-14 sm:w-16 sm:h-16 magical-gradient rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4"
+            className="w-14 h-14 sm:w-16 sm:h-16 discord-gradient rounded-full flex items-center justify-center mx-auto mb-4"
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -180,13 +155,13 @@ export default function Login() {
               transition={{ duration: 0.2 }}
               className="space-y-1"
             >
-              <motion.h1 className="text-2xl sm:text-3xl font-bold magical-text">
+              <motion.h1 className="text-2xl sm:text-3xl font-bold discord-text">
                 {isSignup ? "Create Account" : "Welcome Back"}
               </motion.h1>
-              <motion.p className="text-sm sm:text-base text-purple-200">
+              <motion.p className="text-sm sm:text-base text-muted-foreground">
                 {isSignup
-                  ? "Sign up to start your magical journey"
-                  : "Sign in to continue to your magical chats"}
+                  ? "Sign up to start chatting"
+                  : "Sign in to continue to your chats"}
               </motion.p>
             </motion.div>
           </AnimatePresence>
@@ -200,11 +175,11 @@ export default function Login() {
           className="space-y-4 sm:space-y-6"
         >
           <div className="space-y-1.5 sm:space-y-2">
-            <Label htmlFor="username" className="text-purple-200 text-sm">
+            <Label htmlFor="username" className="text-sm">
               Username
             </Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 h-4 w-4" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 id="username"
                 type="text"
@@ -212,17 +187,17 @@ export default function Login() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your username"
                 required
-                className="pl-10 h-10 bg-white/10 border-white/20 text-white placeholder:text-purple-300/50"
+                className="pl-10 h-10 bg-secondary border-border"
               />
             </div>
           </div>
 
           <div className="space-y-1.5 sm:space-y-2">
-            <Label htmlFor="password" className="text-purple-200 text-sm">
+            <Label htmlFor="password" className="text-sm">
               Password
             </Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 h-4 w-4" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 id="password"
                 type="password"
@@ -230,7 +205,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
-                className="pl-10 h-10 bg-white/10 border-white/20 text-white placeholder:text-purple-300/50"
+                className="pl-10 h-10 bg-secondary border-border"
               />
             </div>
           </div>
@@ -243,7 +218,7 @@ export default function Login() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-10 magical-gradient text-white"
+              className="w-full h-10 discord-gradient text-white"
             >
               {isLoading ? (
                 <motion.div
@@ -277,7 +252,7 @@ export default function Login() {
         </motion.form>
 
         <motion.div
-          className="mt-4 sm:mt-6 text-center text-sm text-purple-200"
+          className="mt-4 sm:mt-6 text-center text-sm text-muted-foreground"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
@@ -285,7 +260,7 @@ export default function Login() {
           {isSignup ? "Already have an account?" : "Don't have an account yet?"}
           <button
             onClick={toggleMode}
-            className="ml-1 text-emerald-400 hover:text-emerald-300 transition-colors font-medium"
+            className="ml-1 text-primary hover:text-primary/80 transition-colors font-medium"
           >
             {isSignup ? "Sign In" : "Sign Up"}
           </button>

@@ -54,54 +54,48 @@ export default function AddMemberModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", damping: 20 }}
-            className="glass-card w-full max-w-md p-6 m-4"
+            className="bg-card w-full max-w-md p-6 m-4 rounded-lg border border-border shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <UserPlus className="h-6 w-6 text-emerald-300" />
-                <h2 className="text-xl font-semibold magical-text">
-                  Add Member to Chat
-                </h2>
+                <UserPlus className="h-6 w-6 text-primary" />
+                <h2 className="text-xl font-semibold">Add Member to Chat</h2>
               </div>
               <motion.button
                 whileHover={{ scale: 1.1, rotate: 90 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                className="p-2 rounded-full hover:bg-secondary transition-colors"
               >
-                <X size={20} className="text-purple-200" />
+                <X size={20} />
               </motion.button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-1">
+                <label className="block text-sm font-medium mb-1">
                   Enter User ID
                 </label>
                 <Input
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   placeholder="User ID to add to chat"
-                  className="bg-white/10 border-white/20 text-white placeholder:text-purple-300/50"
+                  className="bg-secondary border-border"
                 />
-                <p className="text-xs text-purple-300 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Enter the ID of the user you want to add to this chat
                 </p>
               </div>
 
               <div className="flex justify-end gap-2 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={onClose}
-                  className="border-white/20 text-purple-200 hover:bg-white/10 hover:text-white"
-                >
+                <Button variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
                 <Button
                   onClick={handleAddMember}
                   disabled={isAdding}
-                  className="magical-gradient text-white"
+                  className="discord-gradient text-white"
                 >
                   {isAdding ? (
                     <motion.div

@@ -10,13 +10,9 @@ import createChat from "@/lib/chat/createChat";
 
 interface CreateChatButtonProps {
   loginInfo: Me;
-  chatOpen: boolean;
 }
 
-export default function CreateChatButton({
-  loginInfo,
-  chatOpen,
-}: CreateChatButtonProps) {
+export default function CreateChatButton({ loginInfo }: CreateChatButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [userId, setUserId] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -30,12 +26,8 @@ export default function CreateChatButton({
     setIsCreating(true);
 
     try {
-      const response = await createChat(loginInfo, userId);
-
-      console.log(response);
-
+      await createChat(loginInfo, userId);
       toast.success("Chat created successfully!");
-
       setUserId("");
       setIsOpen(false);
     } catch (error) {
@@ -52,9 +44,7 @@ export default function CreateChatButton({
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full magical-gradient flex items-center justify-center shadow-lg z-20 ${
-          chatOpen ? "hidden" : " visible"
-        }`}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full discord-gradient flex items-center justify-center shadow-lg z-20"
       >
         <Plus size={24} className="text-white" />
       </motion.button>
@@ -73,54 +63,48 @@ export default function CreateChatButton({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 20 }}
-              className="glass-card w-full max-w-md p-6 m-4"
+              className="bg-card w-full max-w-md p-6 m-4 rounded-lg border border-border shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                  <MessageSquarePlus className="h-6 w-6 text-purple-300" />
-                  <h2 className="text-xl font-semibold magical-text">
-                    Create New Chat
-                  </h2>
+                  <MessageSquarePlus className="h-6 w-6 text-primary" />
+                  <h2 className="text-xl font-semibold">Create New Chat</h2>
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                  className="p-2 rounded-full hover:bg-secondary transition-colors"
                 >
-                  <X size={20} className="text-purple-200" />
+                  <X size={20} />
                 </motion.button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-1">
+                  <label className="block text-sm font-medium mb-1">
                     Enter User ID
                   </label>
                   <Input
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
                     placeholder="User ID to chat with"
-                    className="bg-white/10 border-white/20 text-white placeholder:text-purple-300/50"
+                    className="bg-secondary border-border"
                   />
-                  <p className="text-xs text-purple-300 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Enter the ID of the user you want to chat with
                   </p>
                 </div>
 
                 <div className="flex justify-end gap-2 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsOpen(false)}
-                    className="border-white/20 text-purple-200 hover:bg-white/10 hover:text-white"
-                  >
+                  <Button variant="outline" onClick={() => setIsOpen(false)}>
                     Cancel
                   </Button>
                   <Button
                     onClick={handleCreateChat}
                     disabled={isCreating}
-                    className="magical-gradient text-white"
+                    className="discord-gradient text-white"
                   >
                     {isCreating ? (
                       <motion.div

@@ -26,6 +26,39 @@ const UserPanel = ({ loginInfo }: { loginInfo: Me }) => {
     toast("ID copied to clipboard");
   };
 
+  /* 
+    We will be changing the entire design of the project.
+
+    The shouty colors will be taken off, and some necessary UI adjustments would be made.
+
+    First, let's change the color scheme. We'll make it black and light purple instead (just like discord)
+
+    The loading aimation has to chnge too. Make it something more different like a spinning str, globe or something.
+
+    Also, the particles animation should be removed.
+
+    Change the overall vibe to be like discord instead.
+
+    Add animations to necessary components
+
+    Now for the chat lobby component, Let only the chat rooms list be present on it on mobile. On larger screens, you can place them side-by-side, but beautifully and cleanly. On each chat room list component, add a preview of the most recent message from that chat to it. You can get that from the chatMessages state because it wouold be updated with socket.io. 
+
+    Also, take off the chat delete button from where it currently is. It's very easy to mistakenlt click on it. Make it appear in the opened chat screen instead. In a menu that can be opened which would contain utility buttons like delete chat
+
+    also, take off the user panel. I want the chat-lobby page to look more neat and clean and beautiful too. The header will have only the user's icon(the first letter in the name since ther isn't any photo icon) and the text "Chat Lobby".
+
+    When the user profile icon is clicker, it should open a drawer or panel that is beautifully animated. This would contain the user's other information and some necessary util buttons. Including the developer's information, which is me. Add my email too jonathandestinec@gmail.com along with my instagram and whatsapp number link +2349061426386
+
+    Next, chts should be opened in full screen on mobile. When a user clicks a chat, it should open in fullscreen, not cropped like we have it currently.
+
+    Also, most recemntly created chats should be appended to the top of the list instead of the bottom.
+
+    Also, for the chat opened screen, we should disable the send button immediately after the api call request is made This would prevent people from mistakenly calling the send multiple times.
+
+    These are the changes so far. 
+
+  */
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}

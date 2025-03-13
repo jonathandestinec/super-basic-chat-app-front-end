@@ -4,72 +4,26 @@
 
 @layer base {
   :root {
-    --background: 270 50% 8%;
-    --foreground: 270 10% 98%;
-    --card: 270 50% 10%;
-    --card-foreground: 270 10% 98%;
-    --popover: 270 50% 10%;
-    --popover-foreground: 270 10% 98%;
-    --primary: 270 95% 65%;
-    --primary-foreground: 270 10% 98%;
-    --secondary: 154 75% 45%;
-    --secondary-foreground: 270 10% 98%;
-    --muted: 270 50% 15%;
-    --muted-foreground: 270 10% 70%;
-    --accent: 154 75% 45%;
-    --accent-foreground: 270 10% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 270 50% 20%;
-    --input: 270 50% 20%;
-    --ring: 270 95% 65%;
-    --radius: 0.75rem;
-
-    /* Gradient colors */
-    --gradient-start: 270 95% 65%;
-    --gradient-mid: 260 80% 55%;
-    --gradient-end: 154 75% 45%;
-
-    /* Chart colors */
-    --chart-1: 270 95% 65%;
-    --chart-2: 154 75% 45%;
-    --chart-3: 260 80% 55%;
-    --chart-4: 290 70% 60%;
-    --chart-5: 180 70% 50%;
-  }
-
-  .dark {
-    --background: 270 50% 5%;
-    --foreground: 270 10% 98%;
-    --card: 270 50% 8%;
-    --card-foreground: 270 10% 98%;
-    --popover: 270 50% 8%;
-    --popover-foreground: 270 10% 98%;
-    --primary: 270 95% 65%;
-    --primary-foreground: 270 10% 98%;
-    --secondary: 154 75% 45%;
-    --secondary-foreground: 270 10% 98%;
-    --muted: 270 50% 12%;
-    --muted-foreground: 270 10% 70%;
-    --accent: 154 75% 45%;
-    --accent-foreground: 270 10% 98%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 252 87% 73%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 270 50% 15%;
-    --input: 270 50% 15%;
-    --ring: 270 95% 65%;
-
-    /* Gradient colors */
-    --gradient-start: 270 95% 65%;
-    --gradient-mid: 260 80% 55%;
-    --gradient-end: 154 75% 45%;
-
-    /* Chart colors */
-    --chart-1: 270 95% 65%;
-    --chart-2: 154 75% 45%;
-    --chart-3: 260 80% 55%;
-    --chart-4: 290 70% 60%;
-    --chart-5: 180 70% 50%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 252 87% 73%;
+    --radius: 0.5rem;
   }
 }
 
@@ -78,30 +32,50 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-gradient-to-br from-purple-900 via-purple-800 to-emerald-800 min-h-screen text-foreground;
-    background-attachment: fixed;
+    @apply bg-background text-foreground;
   }
 }
 
 @layer utilities {
-  .magical-gradient {
-    @apply bg-gradient-to-r from-purple-600 via-violet-600 to-emerald-500;
+  .discord-gradient {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-500;
   }
 
-  .magical-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-violet-400 to-emerald-400;
+  .discord-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400;
   }
 
-  .magical-border {
-    @apply border border-transparent bg-gradient-to-r from-purple-500 via-violet-500 to-emerald-400 bg-clip-border;
+  .discord-border {
+    @apply border border-transparent bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-border;
   }
 
   .glass-effect {
-    @apply bg-white/10 backdrop-blur-md;
+    @apply bg-secondary/50 backdrop-blur-md;
   }
 
   .glass-card {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl;
+    @apply bg-secondary/50 backdrop-blur-md border border-border/20 rounded-lg shadow-lg;
+  }
+
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
 

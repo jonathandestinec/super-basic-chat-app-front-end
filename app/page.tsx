@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import Login from "@/components/login";
 import Loading from "@/components/loading";
 import ChatLobby from "@/components/chat-lobby";
-import useUser from "./hooks/useUser";
+import useUser from "../hooks/useUser";
 
 const Page = () => {
   const { loginInfo, isLoading } = useUser();

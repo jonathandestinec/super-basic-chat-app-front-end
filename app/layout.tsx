@@ -1,13 +1,13 @@
 import "./globals.css";
 import { Inter } from "next/font/google";
-import type React from "react"; // Import React
+import type React from "react";
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Chat App",
-  description: "A modern chat application",
+  title: "Super BAsi Chat App",
+  description: "Just as it says",
 };
 
 export default function RootLayout({
@@ -17,9 +17,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} bg-black text-white min-h-screen`}>
+      <body
+        className={`${inter.className} bg-background text-foreground min-h-screen`}
+      >
         {children}
-        <Toaster />
+        <Toaster position="top-center" />
       </body>
     </html>
   );
